@@ -28,7 +28,7 @@ const pizzaSlice = createSlice({
     [fetchPizzas.fulfilled]: (state, action) => {
       console.log(state, "Все ок");
     },
-    [fetchPizzas.reject]: (state, action) => {
+    [fetchPizzas.rejected]: (state, action) => {
       console.log("Была ошибка");
     },
   },
