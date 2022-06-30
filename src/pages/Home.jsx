@@ -1,35 +1,27 @@
 import React from 'react';
 import qs from "qs";
-
-
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 import { setCategoryId, setCurrentPage, setFilters} from "../redux/slices/filterSlice";
 import {fetchPizzas} from "../redux/slices/pizzaSlice";
-
 import Categories from "../components/Categories";
 import Sort from "../components/Sort";
 import PizzaBlock from "../components/PizzaBlock";
 import Skeleton from "../components/PizzaBlock/Skeleton";
 import Pagination from "../components/Pagination"
-
-import { SearchContext } from "../App";
+import {selectPizzaData} from "../redux/slices/pizzaSlice"
+import { selectFilter } from "../redux/slices/filterSlice";
 import { sortList } from "../components/Sort"
 
-function Home() {
+const  Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const isSearch = React.useRef(false);
   const isMounted = React.useRef(false);
 
-  const { categoryId, sort, currentPage } = useSelector((state) => state.filter);
-  const items = useSelector(
-    (state) => state.pizza.items);
+  const { categoryId, sort, currentPage, searchValue } = useSelector(selectFilter);
+  const { items, status } = useSelector(selectPizzaData);
 
-  const { searchValue} = React.useContext(SearchContext);
-  
-  const [isLoading, setIsLoading] = React.useState(true);
   
  const onChangeCategory = (id) => {
   dispatch(setCategoryId(id))
@@ -40,21 +32,11 @@ function Home() {
  };
 
  const getPizzas = async () => {
-   setIsLoading(true);
 
    const sortBy = sort.sortProperty.replace("-", "");
    const order = sort.sortProperty.includes("-") ? "asc" : "desc";
-   const search = searchValue ? `search=${searchValue}` : "";
+   const search = searchValue ;
    const category = categoryId > 0 ? `category=${categoryId}` : "";
-
-   // await axios
-   //   .get(
-   //     `https://628e7a35368687f3e7179014.mockapi.io/items?page=${currentPage}&limit=8&${category}&sortBy=${sortBy}&order=desc&${search}`
-   //   )
-   //   .then((res) => {
-   //     setItems(res.data);
-   //     setIsLoading(false);
-   //   });
 
    dispatch(
      fetchPizzas({
@@ -81,7 +63,6 @@ function Home() {
          sort,
        })
      );
-     isSearch.current = true;
    }
  }, [categoryId, sort.sortProperty, searchValue, currentPage]);
 
@@ -94,40 +75,46 @@ function Home() {
         currentPage,
       };
 
-     const queryString = qs.stringify(params, { skipNulls: true });
+      const queryString = qs.stringify(params, { skipNulls: true });
 
-     navigate(`/?${queryString}`);}
-   
-   isMounted.current = true;
-    }, [categoryId, sort.sortProperty, searchValue, currentPage]);
+      navigate(`/?${queryString}`);
+    }
 
-   React.useEffect(() => {
+     isMounted.current = true;
+
     if (window.location.search) {
       getPizzas();
     }
-    }, [categoryId, sort.sortProperty, searchValue, currentPage]);
+  }, [categoryId, sort.sortProperty, searchValue, currentPage]);
 
 
 
 const skeletons = [...new Array(6)].map((_, index) => <Skeleton key={index} />);
 
- const pizzas = items.map((obj) => <PizzaBlock key={obj.id} {...obj} />);
+ const pizzas = items.map((obj) => (<Link  key={obj.id} to={`/pizza/${obj.id}`}
+ ><PizzaBlock {...obj} /></Link>));
 
   return (
     <div className="container">
       <div className="content__top">
-        <Categories
-          value={categoryId}
-          onChangeCategory={onChangeCategory}
-        />
-        <Sort  />
+        <Categories value={categoryId} onChangeCategory={onChangeCategory} />
+        <Sort />
       </div>
       <h2 className="content__title">Все пиццы</h2>
-      <div className="content__items">{isLoading ? skeletons : pizzas}</div>
-      <Pagination
-      currentPage={currentPage}
-      onChangePage={onChangePage}
-      />
+      {status === "error" ? (
+        <div className="error-info">
+          <h2> Корзина пустая 😟</h2>
+          <p>
+            Вероятней всего, вы не заказывали еще пиццу. Для того, чтобы
+            заказать, перейди на главную страницу
+          </p>
+        </div>
+      ) : (
+        <div className="content__items">
+          {status === "loading" ? skeletons : pizzas}
+        </div>
+      )}
+      <Pagination currentPage={currentPage} onChangePage={onChangePage} />
     </div>
   );
 }
